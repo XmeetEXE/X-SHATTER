@@ -1,71 +1,209 @@
 # X-SHATTER
 
-Local-first image encryption. A PNG goes in — a **valid PNG that looks like pure random noise** comes out. Completely unrecognizable. Only the correct passphrase restores the original, pixel-identical. Wrong passphrase = clean authentication failure, nothing written.
+<p align="center">
+  <strong>Turn a PNG into pure static. Restore it only with the right passphrase.</strong>
+</p>
 
-Zero npm dependencies. Only Node.js built-ins (`node:crypto`, `node:zlib`, `node:fs`, `node:http`, `node:readline`, `node:test`). The browser dashboard uses WebCrypto + Canvas — same format, fully interoperable: files shattered in the dashboard decrypt with the CLI and vice versa.
+<p align="center">
+  <a href="https://github.com/XmeetEXE/X-SHATTER"><img src="https://img.shields.io/badge/PROJECT-X--SHATTER-111111?style=for-the-badge&logo=github&logoColor=white" alt="X-SHATTER"></a>
+  <img src="https://img.shields.io/badge/Runtime-Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js">
+  <img src="https://img.shields.io/badge/Dependencies-Zero-16A34A?style=for-the-badge" alt="Zero dependencies">
+  <img src="https://img.shields.io/badge/Crypto-AES--256--GCM-2563EB?style=for-the-badge" alt="AES-256-GCM">
+</p>
 
+<p align="center">
+  <em>Local-first · Cross-compatible CLI and browser dashboard · No npm dependencies</em>
+</p>
+
+---
+
+## What is X-SHATTER?
+
+**X-SHATTER** is a local-first image encryption tool that transforms a PNG into another valid PNG filled with noise-like pixels. The original image can be restored with the correct passphrase.
+
+No cloud upload. No external service. Your files stay on your machine.
+
+```text
+  ORIGINAL PNG             X-SHATTER             SHATTERED PNG
+  ┌─────────────┐       ┌──────────────┐       ┌─────────────────┐
+  │             │       │              │       │ ░▒▓░▒░▓▒▓░▒░▓▒ │
+  │   PHOTO     │  ───▶ │   ENCRYPT    │ ───▶  │ ▒▓░▒▓░▒░▓▒▓░▒░ │
+  │             │       │              │       │ ▓▒░▓▒▒░▓░▒▓░▒▓ │
+  └─────────────┘       └──────────────┘       └─────────────────┘
+                                                    │
+                                             Correct passphrase
+                                                    ▼
+                                             ┌─────────────────┐
+                                             │ RESTORED PNG    │
+                                             │ Pixel-identical │
+                                             └─────────────────┘
 ```
-original.png  →  [ X-SHATTER ]  →  shattered.png (pure static)
-shattered.png →  [ X-SHATTER ]  →  restored.png  (pixel-identical)
-```
 
-## Quickstart
+> The output is encrypted data represented as PNG pixel data. It is not steganography, and the file itself reveals that it was processed by X-SHATTER.
+
+## Features
+
+- **Image encryption:** Encrypt PNG pixel data using AES-256-GCM.
+- **Passphrase-based keys:** Derive a 256-bit key with PBKDF2-HMAC-SHA256.
+- **Noise-like output:** The encrypted pixel data renders as a noise-filled PNG.
+- **Pixel-identical restoration:** Restore the original RGBA pixels with the correct passphrase.
+- **CLI + browser dashboard:** Use the terminal or a local dark-themed web interface.
+- **Cross-compatible format:** Encrypt in the dashboard and decrypt with the CLI, or vice versa.
+- **Local-first:** Processing happens locally; no remote upload service is involved.
+- **Zero npm dependencies:** Built with Node.js built-ins, WebCrypto, and Canvas.
+- **Authentication checks:** Incorrect passphrases or modified encrypted data fail verification.
+
+## Quick start
+
+### Requirements
+
+- Node.js
+- A modern browser for the dashboard
+
+### Setup
+
+Clone the repository and enter the project folder:
 
 ```bash
-# check your setup
-sh setup.sh        # Windows: setup.bat
-
-# CLI
-node src/cli.js keygen
-node src/cli.js encrypt photo.png -o photo.shattered.png
-node src/cli.js decrypt photo.shattered.png -o photo.restored.png
-node src/cli.js info photo.shattered.png
-
-# dashboard (dark local web UI)
-node server.js
-# → http://127.0.0.1:4174/
+git clone https://github.com/XmeetEXE/X-SHATTER.git
+cd X-SHATTER
 ```
 
-The browser dashboard limits images to 12 million pixels to avoid excessive memory use; use the CLI for larger files. The encrypt/decrypt prompts hide your passphrase. `--pass <p>` exists for scripting but prints a warning — it stays in your shell history.
+Run the setup check:
+
+```bash
+# macOS / Linux
+sh setup.sh
+
+# Windows
+setup.bat
+```
+
+### Command-line interface
+
+Generate a passphrase:
+
+```bash
+node src/cli.js keygen
+```
+
+Encrypt a PNG:
+
+```bash
+node src/cli.js encrypt photo.png -o photo.shattered.png
+```
+
+Decrypt it:
+
+```bash
+node src/cli.js decrypt photo.shattered.png -o photo.restored.png
+```
+
+Inspect a Shatter file:
+
+```bash
+node src/cli.js info photo.shattered.png
+```
+
+### Browser dashboard
+
+Start the local server:
+
+```bash
+node server.js
+```
+
+Open **http://127.0.0.1:4174/** in your browser.
+
+The dashboard is bound to localhost. Its current image limit is **12 million pixels** to reduce excessive browser memory use. Use the CLI for larger images.
+
+> The interactive passphrase prompt hides input. The `--pass <p>` option is available for scripting, but passing a passphrase directly can expose it in shell history or process information. Prefer the interactive prompt when possible.
+
+## How it works
+
+1. **Read:** X-SHATTER decodes the input PNG into RGBA pixel data.
+2. **Derive:** A key is derived from the passphrase and a fresh random salt using PBKDF2-HMAC-SHA256.
+3. **Encrypt:** AES-256-GCM encrypts the pixel buffer using a fresh nonce and authenticated additional data (AAD).
+4. **Package:** The ciphertext is written into a valid PNG container with X-SHATTER metadata.
+5. **Restore:** During decryption, the same key is derived and GCM authentication is checked before the original pixel data is restored.
+
+```text
+Passphrase + Salt
+       │
+       ▼
+ PBKDF2-HMAC-SHA256
+       │
+       ▼
+  256-bit Key ───────────────┐
+                             ▼
+RGBA Pixels ───────────▶ AES-256-GCM ───▶ Ciphertext
+                             │
+                             └───────────▶ Authentication Tag
+```
 
 ## File format (v1)
 
-| Item | Spec |
+| Component | Specification |
 |---|---|
-| Container | PNG, same width/height as input, 8-bit RGBA (color type 6) |
-| IDAT payload | AES-256-GCM ciphertext of the **raw RGBA pixel buffer** (row-major, top→bottom, left→right — no PNG filter bytes in the plaintext) |
-| Header | Exactly one `tEXt` chunk, keyword `X-Shatter`, text = base64url (no padding) of `{"v":1,"salt":"…","nonce":"…","tag":"…","w":W,"h":H}` |
-| Salt / nonce / tag | 16 / 12 / 16 bytes; fresh random values for **every** encryption |
-| AAD | ASCII `X-SHATTER/v1/{w}x{h}` — editing the stored dimensions fails authentication |
-| KDF | PBKDF2-HMAC-SHA256, **600,000 iterations**, 32-byte key |
-| Metadata | **All** input ancillary chunks are stripped — output is only `IHDR`, the `X-Shatter` `tEXt`, `IDAT`, `IEND` |
+| Container | PNG, same width and height as input, 8-bit RGBA |
+| Encrypted payload | AES-256-GCM ciphertext of the raw RGBA pixel buffer |
+| Header | One `tEXt` chunk with keyword `X-Shatter` |
+| Metadata | Base64url-encoded JSON containing version, salt, nonce, tag, width, and height |
+| Salt | 16 random bytes |
+| Nonce | 12 random bytes |
+| Authentication tag | 16 bytes |
+| KDF | PBKDF2-HMAC-SHA256, 600,000 iterations, 32-byte key |
+| AAD | `X-SHATTER/v1/{w}x{h}` |
+| PNG chunks | `IHDR`, X-Shatter `tEXt`, `IDAT`, `IEND` |
 
-PBKDF2 is used deliberately instead of scrypt/argon2: WebCrypto has no scrypt, and PBKDF2 is what makes the CLI and the dashboard derive identical keys. The GCM tag lives in the header (not appended to the pixel data) on both sides.
+The format is documented in `src/shatter.js` and `public/app.js`. PBKDF2 is used for compatibility between Node.js and browser WebCrypto, which does not provide scrypt as a built-in KDF.
 
-## Browser processing note
+## Security notes
 
-The dashboard drains compression/decompression streams while feeding them, preventing large payloads from stalling due to stream backpressure.
+- **Keep your passphrase safe.** There is no password reset, recovery mechanism, or backdoor. If the passphrase is lost, the image may be unrecoverable.
+- **Use a strong, unique passphrase.** A weak or reused passphrase is a more realistic risk than brute-forcing AES-256-GCM directly.
+- **Keep the exact output file.** Recompression, resizing, cropping, or services that strip or rewrite PNG metadata can corrupt the file and prevent decryption.
+- **Encryption is not anonymity.** The `X-Shatter` header is intentionally readable so the file can be identified and decrypted. The tool does not hide the fact that encryption was used.
+- **Metadata can reveal dimensions.** The image dimensions are stored in the header.
+- **No side-channel protection claim.** Resistance to timing, power, or other side-channel analysis is outside the project's scope.
+- **Review before relying on it.** Cryptographic parameters are documented for inspection; do not treat this README or the implementation as a substitute for an independent security audit.
 
-## Security & limitations — read this
+## Project structure
 
-- **Your passphrase is everything.** There is no recovery, no backdoor, no "forgot passphrase" flow. A weak passphrase (short, dictionary word, reused) is the realistic attack — the crypto itself (AES-256-GCM + 600k-round PBKDF2) is not the weak link. Use `keygen`.
-- **Keep the exact file.** Decryption needs the shattered PNG byte-for-byte: any recompression, resize, crop, or re-upload through an app that strips/re-encodes metadata (messengers, social apps) breaks it permanently. Store the `.png` as a file.
-- **Encryption hides content, not the fact of encryption.** Anyone can see it's a SHATTER file (the `X-Shatter` header is plaintext by design — it's needed to decrypt). If you need deniability, this is the wrong tool.
-- **Side channels:** the file leaks only approximate image dimensions (via file size). Timing/power analysis resistance is out of scope.
-- **Not steganography.** The output screams "encrypted image" — that's the point: unrecognizable, not invisible.
-- Parameters are stated plainly above so they can be scrutinized. No security-through-obscurity claims: the format is fully documented in `src/shatter.js` and `public/app.js`, and `test/interop.test.js` proves both implementations agree.
-
-## Project layout
-
+```text
+X-SHATTER/
+├── src/
+│   ├── png.js          # PNG decoding and RGBA encoding
+│   ├── shatter.js      # Crypto core and file format
+│   └── cli.js          # CLI commands
+├── public/
+│   └──               # Browser dashboard (WebCrypto + Canvas)
+├── test/               # Automated tests
+├── server.js           # Local dashboard server
+├── setup.sh            # macOS / Linux setup check
+├── setup.bat           # Windows setup check
+└── README.md
 ```
-src/png.js       pure-JS PNG codec (decode 8-bit gray/RGB/RGBA, encode RGBA)
-src/shatter.js   crypto core: KDF, AES-GCM, file format (shared spec)
-src/cli.js       CLI: encrypt / decrypt / keygen / info
-server.js        dashboard server, 127.0.0.1:4174 only
-public/          dashboard UI (WebCrypto + Canvas, zero deps)
-test/            node:test suite — 42 tests, all green (`node --test "test/*.test.js"`)
+
+## Tests
+
+Run the test suite with Node.js:
+
+```bash
+node --test test/*.test.js
 ```
+
+The repository includes tests for the core format and CLI/dashboard interoperability.
 
 ## License
 
-XMEET License 2026 — © 2026 XMEET. Personal, educational, and defensive use. Redistribution or commercial use needs written permission. See `LICENSE`.
+**XMEET License 2026** · © 2026 XMEET
+
+Personal, educational, and defensive use. Redistribution or commercial use requires written permission. See [LICENSE](LICENSE) for the full terms.
+
+---
+
+<p align="center">
+  <strong>X-SHATTER</strong><br>
+  <sub>Local-first image encryption by XMEET</sub>
+</p>

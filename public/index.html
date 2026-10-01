@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>X-SHATTER — local-first image encryption</title>
+<style>
+  :root{
+    --bg:#060606; --panel:#0d0d0d; --line:#262626; --line2:#3a3a3a;
+    --fg:#f2f2f2; --dim:#8f8f8f; --ok:#b6ffb6; --err:#ff7b7b;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg); color:var(--fg); margin:0;
+       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+  header{border-bottom:1px solid var(--line); padding:30px 28px;}
+  .logo{font-size:32px; font-weight:800; letter-spacing:8px;}
+  .logo span{color:var(--dim); font-weight:400;}
+  .tag{color:var(--dim); font-size:11px; letter-spacing:3px; margin-top:10px;}
+  main{display:grid; grid-template-columns:1fr 1fr; gap:22px;
+       padding:26px; max-width:1180px; margin:0 auto;}
+  @media (max-width:920px){ main{grid-template-columns:1fr;} }
+  .panel{background:var(--panel); border:1px solid var(--line); padding:22px;}
+  .panel h2{font-size:12px; letter-spacing:5px; color:var(--dim);
+            margin:0 0 18px; font-weight:400;}
+  .panel h2 b{color:var(--fg); font-weight:800;}
+  .drop{border:1px dashed var(--line2); padding:30px 16px; text-align:center;
+        cursor:pointer; color:var(--dim); font-size:11px; letter-spacing:2px;}
+  .drop:hover,.drop.over{border-color:var(--fg); color:var(--fg);}
+  .previews{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0 4px;}
+  figure{margin:0;}
+  canvas{width:100%; display:block; background:#000;
+         border:1px solid var(--line); image-rendering:pixelated;}
+  figcaption{font-size:9px; letter-spacing:3px; color:var(--dim); margin-top:7px;}
+  label{display:block; font-size:10px; letter-spacing:3px; color:var(--dim); margin:14px 0 0;}
+  input[type=password]{width:100%; background:#000; border:1px solid var(--line);
+    color:var(--fg); padding:11px 10px; font:inherit; font-size:13px; margin-top:7px;}
+  input[type=password]:focus{outline:none; border-color:var(--fg);}
+  button{width:100%; background:var(--fg); color:#000; border:none; padding:13px;
+    font:inherit; font-size:12px; font-weight:800; letter-spacing:4px;
+    cursor:pointer; margin-top:16px;}
+  button:hover{background:#fff;}
+  button:disabled{opacity:.45; cursor:wait;}
+  .dl{display:block; text-align:center; margin-top:12px; color:var(--fg);
+     font-size:11px; letter-spacing:3px; text-decoration:none;
+     border:1px solid var(--line2); padding:11px;}
+  .dl:hover{border-color:var(--fg);}
+  .status{font-size:11px; letter-spacing:1px; min-height:18px; margin:12px 0 0; color:var(--dim);}
+  .status.err{color:var(--err);}
+  .status.ok{color:var(--ok);}
+  .meta{font-size:10px; letter-spacing:2px; color:var(--dim); margin:10px 0 0; min-height:14px;}
+  footer{border-top:1px solid var(--line); padding:20px 28px; color:var(--dim);
+         font-size:10px; letter-spacing:2px; text-align:center;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">X<span>-</span>SHATTER</div>
+  <div class="tag">LOCAL-FIRST IMAGE ENCRYPTION · NOTHING LEAVES THIS DEVICE</div>
+</header>
+<main>
+  <section class="panel">
+    <h2><b>01</b> — ENCRYPT</h2>
+    <div class="drop" id="enc-drop">DROP A PNG HERE · OR CLICK TO BROWSE
+      <input type="file" id="enc-file" accept="image/png" hidden>
+    </div>
+    <div class="previews">
+      <figure><canvas id="enc-orig" width="2" height="2"></canvas><figcaption>ORIGINAL</figcaption></figure>
+      <figure><canvas id="enc-noise" width="2" height="2"></canvas><figcaption>SHATTERED</figcaption></figure>
+    </div>
+    <div class="meta" id="enc-meta"></div>
+    <label>PASSPHRASE<input type="password" id="enc-pass" autocomplete="new-password"></label>
+    <label>CONFIRM PASSPHRASE<input type="password" id="enc-pass2" autocomplete="new-password"></label>
+    <button id="enc-go">SHATTER IMAGE</button>
+    <a class="dl" id="enc-dl" hidden>DOWNLOAD SHATTERED PNG</a>
+    <p class="status" id="enc-status"></p>
+  </section>
+
+  <section class="panel">
+    <h2><b>02</b> — DECRYPT</h2>
+    <div class="drop" id="dec-drop">DROP A SHATTERED PNG HERE · OR CLICK TO BROWSE
+      <input type="file" id="dec-file" accept="image/png" hidden>
+    </div>
+    <div class="previews">
+      <figure><canvas id="dec-noise" width="2" height="2"></canvas><figcaption>SHATTERED</figcaption></figure>
+      <figure><canvas id="dec-orig" width="2" height="2"></canvas><figcaption>RESTORED</figcaption></figure>
+    </div>
+    <div class="meta" id="dec-meta"></div>
+    <label>PASSPHRASE<input type="password" id="dec-pass" autocomplete="current-password"></label>
+    <button id="dec-go">RESTORE IMAGE</button>
+    <a class="dl" id="dec-dl" hidden>DOWNLOAD RESTORED PNG</a>
+    <p class="status" id="dec-status"></p>
+  </section>
+</main>
+<footer>
+  AES-256-GCM · PBKDF2-HMAC-SHA256 (600,000 ROUNDS) · FILES MADE HERE DECRYPT WITH THE CLI AND VICE VERSA
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

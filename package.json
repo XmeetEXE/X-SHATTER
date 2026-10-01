@@ -1,0 +1,1 @@
+{"description":"Local-first image encryption — PNG in, pure-noise PNG out, restored only by the correct passphrase.","engines":{"node":">=20"},"license":"SEE LICENSE IN LICENSE","name":"x-shatter","scripts":{"cli":"node src/cli.js","start":"node server.js","test":"node --test \"test/*.test.js\""},"version":"1.0.2"}
